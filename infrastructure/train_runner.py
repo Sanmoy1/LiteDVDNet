@@ -79,7 +79,12 @@ class TrainRunner:
 
 			# Load dataset
 			print('> Loading datasets ...')
-			dataset_val = ValDataset(valsetdir=args['valset_dir'], gray_mode=False)
+			valset_dir = args.get('valset_dir', '')
+			if valset_dir and os.path.isdir(valset_dir):
+				dataset_val = ValDataset(valsetdir=valset_dir, gray_mode=False)
+			else:
+				dataset_val = []
+				print('> Validation set not found or not specified. Skipping validation.')
 			loader_train = train_dali_loader(batch_size=args['batch_size'], \
 											 file_root=args['trainset_dir'], \
 											 sequence_length=args['temp_patch_size'], \
