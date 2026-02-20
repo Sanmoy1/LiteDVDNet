@@ -11,7 +11,7 @@ model_params:
 manual_seed: 10
 use_cuda: true
 batch_size: 64
-epochs: 80
+epochs: 1
 resume_training: false
 resume_dir: ''
 milestones: [3, 4, 25, 70]
@@ -25,8 +25,8 @@ val_noiseL: 25.0
 patch_size: 96
 temp_patch_size: 5
 max_number_patches: 32000
-trainset_dir: './datasets/davis2017/videos/480p'
-valset_dir: './datasets/Set8/validation'
+trainset_dir: '/content/drive/MyDrive/lightdvdnet/dataset/light_davis_dataset'
+valset_dir: ''
 
 
 

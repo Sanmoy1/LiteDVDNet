@@ -197,11 +197,14 @@ class TrainRunner:
 				model.eval()
 
 				# Validation
-				psnr_val = self.calculate_psnr(model, dataset_val, args['val_noiseL'], args['temp_patch_size'])
+				if len(dataset_val) > 0:
+					psnr_val = self.calculate_psnr(model, dataset_val, args['val_noiseL'], args['temp_patch_size'])
+					# Log validation results
+					print(f"[epoch {epoch}] PSNR: {psnr_val:.4f}")
+					logger.info(f"[epoch {epoch}] PSNR: {psnr_val:.4f}")
+				else:
+					print(f"[epoch {epoch}] Validation skipped (no validation data found)")
 
-				# Log validation results
-				print(f"[epoch {epoch}] PSNR: {psnr_val:.4f}")
-				logger.info(f"[epoch {epoch}] PSNR: {psnr_val:.4f}")
 
 				# save model and checkpoint
 				training_params['start_epoch'] = epoch
