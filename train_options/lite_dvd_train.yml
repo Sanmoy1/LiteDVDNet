@@ -26,7 +26,7 @@ patch_size: 96
 temp_patch_size: 5
 max_number_patches: 32000
 trainset_dir: '/content/drive/MyDrive/lightdvdnet/dataset/light_davis_dataset'
-valset_dir: ''
+valset_dir: '/content/drive/MyDrive/lightdvdnet/dataset/Set8/validation'
 
 
 
