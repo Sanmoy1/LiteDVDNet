@@ -12,6 +12,7 @@ from dataset import ValDataset
 
 from train_common import resume_training, save_model_checkpoint, need_ortog, binary_lr_scheduler
 from utils import normalize_augment, init_logging, svd_orthogonalization, close_logger, load_options, batch_psnr
+from degradation import apply_complex_degradation
 
 
 class TrainRunner:
@@ -162,21 +163,15 @@ class TrainRunner:
 					img_train, gt_train = normalize_augment(data[0]['data'], ctrl_fr_idx)
 					N, _, H, W = img_train.size()
 
-					# std dev of each sequence
-					stdn = torch.empty((N, 1, 1, 1)).cuda().uniform_(args['noise_ival'][0], to=args['noise_ival'][1])
-
-					# draw noise samples from std dev tensor
-					noise = torch.zeros_like(img_train)
-					noise = torch.normal(mean=noise, std=stdn.expand_as(noise))
-
-					# define noisy input
-					imgn_train = img_train + noise
-
-					# Send tensors to GPU
+					# Send clean frames to GPU first (degradation runs on GPU)
+					img_train = img_train.cuda(non_blocking=True)
 					gt_train = gt_train.cuda(non_blocking=True)
-					imgn_train = imgn_train.cuda(non_blocking=True)
-					noise = noise.cuda(non_blocking=True)
-					noise_map = stdn.expand((N, 1, H, W)).cuda(non_blocking=True)  # one channel per image
+
+					# Apply complex degradation pipeline (Gaussian + Poisson + Blur + JPEG)
+					# stdn is the Gaussian noise std used as the noise_map estimate for the model
+					imgn_train, stdn = apply_complex_degradation(img_train, args['degradation'])
+
+					noise_map = stdn.expand((N, 1, H, W))  # one channel per image, already on GPU
 
 					# Evaluate model and optimize it
 					out_train = model(imgn_train, noise_map)

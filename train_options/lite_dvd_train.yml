@@ -20,13 +20,35 @@ orthog_epochs: 60
 lr: 0.001
 save_every: 10
 save_ckpt_every_epochs: 1
-noise_ival: [5, 55]
+noise_ival: [5, 55]       # kept for backwards compat (val noise level)
 val_noiseL: 25.0
 patch_size: 96
 temp_patch_size: 5
 max_number_patches: 32000
-trainset_dir: '/content/drive/MyDrive/lightdvdnet/dataset/light_davis_dataset'
+trainset_dir: '/content/drive/MyDrive/lightdvdnet/dataset/devis2017'
 valset_dir: '/content/drive/MyDrive/lightdvdnet/dataset/Set8/validation'
+
+# ----- Complex Degradation Pipeline (for training) -----
+# Set enabled: false on any block to disable that degradation type.
+# prob controls per-batch application probability.
+degradation:
+  gaussian_noise:
+    enabled: true
+    sigma_range: [0.0196, 0.2157]   # [5/255, 55/255] — same range as before
+  poisson_noise:
+    enabled: true
+    scale_range: [0.05, 0.5]         # lower = stronger shot noise
+    prob: 0.5
+  blur:
+    enabled: true
+    kernel_sizes: [3, 5, 7]
+    sigma_range: [0.5, 3.0]
+    prob: 0.4
+  compression:
+    enabled: true
+    quality_range: [20, 95]          # JPEG quality (lower = more artifacts)
+    prob: 0.4
+
 
 
 
