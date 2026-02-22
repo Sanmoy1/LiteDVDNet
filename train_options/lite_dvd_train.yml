@@ -14,6 +14,7 @@ batch_size: 64
 epochs: 1
 resume_training: false
 resume_dir: ''
+experiments_dir: '/content/drive/MyDrive/lightdvdnet/experiments'
 milestones: [3, 4, 25, 70]
 learning_rates: [0.01, 0.001, 0.0001, 0.000001]
 orthog_epochs: 60

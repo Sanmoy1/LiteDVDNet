@@ -101,7 +101,7 @@ class TrainRunner:
 			model = self.get_model()
 			args['model_description'] = model.get_desciption()
 			model = nn.DataParallel(model, device_ids=[0]).cuda()
-			args['log_dir'] = os.path.join('experiments', args['model_description'])
+			args['log_dir'] = os.path.join(args.get('experiments_dir', './experiments'), args['model_description'])
 			isResumedTraining = args['resume_training']
 
 			if os.path.exists(args['log_dir']) and isResumedTraining is False:
