@@ -11,9 +11,9 @@ model_params:
 manual_seed: 10
 use_cuda: true
 batch_size: 64
-epochs: 1
-resume_training: false
-resume_dir: ''
+epochs: 20
+resume_training: true
+resume_dir: '/content/drive/MyDrive/lightdvdnet/experiments/litedvdnet_32_64_128_ich30'
 experiments_dir: '/content/drive/MyDrive/lightdvdnet/experiments'
 milestones: [3, 4, 25, 70]
 learning_rates: [0.01, 0.001, 0.0001, 0.000001]
