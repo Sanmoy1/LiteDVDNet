@@ -10,7 +10,7 @@ model_params:
   simple_cv: false
 manual_seed: 10
 use_cuda: true
-batch_size: 64
+batch_size: 128
 epochs: 20
 resume_training: true
 resume_dir: '/content/drive/MyDrive/lightdvdnet/experiments/litedvdnet_32_64_128_ich30'
