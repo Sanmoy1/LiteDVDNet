@@ -4,8 +4,8 @@ import shutil
 import time
 import torch
 
-from random import random
-from basicsr import set_random_seed
+import random
+import numpy as np
 from torch import nn, optim
 from dataloaders import train_dali_loader
 from dataset import ValDataset
@@ -47,11 +47,14 @@ class TrainRunner:
 		seed = args['manual_seed']
 
 		if seed is None:
-			# random seed
 			seed = random.randint(1, 10000)
 			args['manual_seed'] = seed
 
-		set_random_seed(seed)
+		# set seeds for all random sources
+		random.seed(seed)
+		np.random.seed(seed)
+		torch.manual_seed(seed)
+		torch.cuda.manual_seed_all(seed)
 
 	def validate_training_options(self, args):
 
