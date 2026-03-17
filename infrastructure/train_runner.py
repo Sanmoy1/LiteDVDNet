@@ -6,6 +6,7 @@ import torch
 
 import random
 import numpy as np
+import torch.nn.functional as F_ops  # for SR ground truth upsampling
 from torch import nn, optim
 from dataloaders import train_dali_loader
 from dataset import ValDataset
@@ -180,7 +181,15 @@ class TrainRunner:
 					out_train = model(imgn_train, noise_map)
 
 					# Compute loss
-					loss = criterion(gt_train, out_train) / (N * 2)
+					# If SR is enabled, model outputs HR — upsample LR ground truth to match.
+					# When use_sr=False (or scale=1), gt_for_loss == gt_train (backward compatible).
+					sr_scale = args['model_params'].get('scale', 1)
+					if args['model_params'].get('use_sr', False) and sr_scale > 1:
+						gt_for_loss = F_ops.interpolate(gt_train, scale_factor=sr_scale,
+						                                mode='bicubic', align_corners=False).clamp(0., 1.)
+					else:
+						gt_for_loss = gt_train
+					loss = criterion(gt_for_loss, out_train) / (N * 2)
 					loss.backward()
 					optimizer.step()
 

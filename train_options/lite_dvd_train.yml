@@ -1,55 +1,81 @@
-# general settings
-name: lite_dvd_train
-model_name: LiteDVDNet
-module: 'litedvdnet'
-model_params:
-  num_input_frames: 5
-  channels: [32, 64, 128]
-  inference_mode: Basic
-  interm_ch: 30
-  simple_cv: false
-manual_seed: 10
-use_cuda: true
-batch_size: 128
-epochs: 20
-resume_training: true
-resume_dir: '/content/drive/MyDrive/lightdvdnet/experiments/litedvdnet_32_64_128_ich30'
-experiments_dir: '/content/drive/MyDrive/lightdvdnet/experiments'
-milestones: [3, 4, 25, 70]
-learning_rates: [0.01, 0.001, 0.0001, 0.000001]
-orthog_epochs: 60
-lr: 0.001
-save_every: 10
-save_ckpt_every_epochs: 1
-noise_ival: [5, 55]       # kept for backwards compat (val noise level)
-val_noiseL: 25.0
-patch_size: 96
-temp_patch_size: 5
-max_number_patches: 32000
-trainset_dir: '/content/drive/MyDrive/lightdvdnet/dataset/devis2017'
-valset_dir: '/content/drive/MyDrive/lightdvdnet/dataset/Set8/validation'
+# ======================= GENERAL SETTINGS =======================
+name: lite_dvd_train                    # experiment name (used for logging)
+model_name: LiteDVDNet                  # class name of the model (must match class in SR_litedvdnet.py)
+module: 'SR_litedvdnet'                 # python module — use SR_litedvdnet for SR, litedvdnet for original
 
-# ----- Complex Degradation Pipeline (for training) -----
-# Set enabled: false on any block to disable that degradation type.
-# prob controls per-batch application probability.
+# ======================= MODEL ARCHITECTURE =======================
+model_params:
+  num_input_frames: 5                   # number of temporal frames the model takes as input (t-2, t-1, t, t+1, t+2)
+  channels: [32, 64, 128]              # feature channels at each encoder scale (3 scales = 2 downsampling levels)
+  inference_mode: Basic                 # inference strategy: "Basic" or "Cached" (cached reuses intermediate features)
+  interm_ch: 30                         # intermediate channels in internal conv blocks
+  simple_cv: false                      # if true, uses a simplified CvBlock (fewer params, less accuracy)
+  use_sr: false                         # set true to enable the SR upsampling head (2x/4x)
+  scale: 2                              # SR upscale factor (used only when use_sr=true)
+
+# ======================= TRAINING SETTINGS =======================
+manual_seed: 10                         # random seed for reproducibility
+use_cuda: true                          # use GPU for training (must be true for DALI dataloader)
+batch_size: 128                         # number of video clips per mini-batch (increase for better GPU utilization)
+epochs: 20                              # total number of training epochs
+
+# ======================= RESUME TRAINING =======================
+resume_training: true                   # if true, loads checkpoint from experiments_dir and continues training
+resume_dir: '/content/drive/MyDrive/lightdvdnet/experiments/litedvdnet_32_64_128_ich30'  # path to checkpoint folder
+experiments_dir: '/content/drive/MyDrive/lightdvdnet/experiments'  # root dir where experiment folders are saved
+
+# ======================= LEARNING RATE SCHEDULE =======================
+milestones: [3, 4, 25, 70]             # epoch numbers at which LR changes (used by lr_scheduler, not active — binary_lr_scheduler is used instead)
+learning_rates: [0.01, 0.001, 0.0001, 0.000001]  # LR values corresponding to milestones (not active — see above)
+orthog_epochs: 60                       # apply SVD orthogonalization regularization for the first N epochs
+lr: 0.001                              # initial learning rate (halved every 10 epochs by binary_lr_scheduler)
+
+# ======================= LOGGING & CHECKPOINTING =======================
+save_every: 10                          # print training loss every N mini-batches
+save_ckpt_every_epochs: 1              # save a numbered checkpoint (ckpt_e{N}.pth) every N epochs
+
+# ======================= NOISE SETTINGS (legacy) =======================
+noise_ival: [5, 55]                     # noise std range in [0,255] scale — used ONLY for validation noise level
+val_noiseL: 25.0                        # fixed noise std (in [0,255]) added during validation PSNR calculation
+
+# ======================= DATA SETTINGS =======================
+patch_size: 96                          # spatial crop size (H=W=96 pixels) for each training sample
+temp_patch_size: 5                      # number of consecutive frames per training clip (must match num_input_frames)
+max_number_patches: 32000               # total number of training samples per epoch (epoch_size)
+trainset_dir: '/content/drive/MyDrive/lightdvdnet/dataset/devis2017'         # path to folder with training .mp4 video files
+valset_dir: '/content/drive/MyDrive/lightdvdnet/dataset/Set8/validation'     # path to validation set (subfolders with .png frames)
+
+# ======================= COMPLEX DEGRADATION PIPELINE =======================
+# Applied during training ONLY. Each type can be toggled independently.
+# "enabled: false" completely skips that degradation.
+# "prob" controls per-batch probability of applying it (0.0 = never, 1.0 = always).
 degradation:
+
+  # --- Gaussian Noise (AWGN) ---
+  # Models thermal/readout sensor noise. Always applied (no prob field — always on).
   gaussian_noise:
     enabled: true
-    sigma_range: [0.0196, 0.2157]   # [5/255, 55/255] — same range as before
+    sigma_range: [0.0196, 0.2157]       # noise std in [0,1] scale — equivalent to [5, 55] in [0,255]
+
+  # --- Poisson Noise (Shot Noise) ---
+  # Signal-dependent noise: brighter pixels get more noise. Models photon counting.
   poisson_noise:
     enabled: true
-    scale_range: [0.05, 0.5]         # lower = stronger shot noise
-    prob: 0.5
+    scale_range: [0.05, 0.5]            # lower scale = stronger noise (inverse relationship)
+    prob: 0.5                            # 50% chance of applying per batch
+
+  # --- Gaussian Blur ---
+  # Models optical defocus / slight motion blur from camera.
   blur:
     enabled: true
-    kernel_sizes: [3, 5, 7]
-    sigma_range: [0.5, 3.0]
-    prob: 0.4
+    kernel_sizes: [3, 5, 7]             # randomly picks one of these kernel sizes
+    sigma_range: [0.5, 3.0]            # blur sigma — higher = more blur
+    prob: 0.4                            # 40% chance of applying per batch
+
+  # --- JPEG Compression Artifacts ---
+  # Models codec blocking artifacts from video compression.
+  # WARNING: runs on CPU (slower). Reduce prob if training speed drops.
   compression:
     enabled: true
-    quality_range: [20, 95]          # JPEG quality (lower = more artifacts)
-    prob: 0.4
-
-
-
-
+    quality_range: [20, 95]             # JPEG quality factor — lower = more blocking artifacts
+    prob: 0.4                            # 40% chance of applying per batch
