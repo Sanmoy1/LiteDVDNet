@@ -284,12 +284,18 @@ class TrainRunner:
 				numframes, C, H, W = seqn_val.shape
 				noise_map = sigma_noise.expand((1, 1, H, W))
 				out_val = self.denoise_seq(model=model, seq=seqn_val, noise_map=noise_map, temp_psz=temp_psz)
-				# If model outputs HR (SR enabled), upsample clean ref to match before PSNR
+				# If model outputs HR (SR enabled), upsample clean ref to match before PSNR.
+				# clean_ref is [numframes, C, H, W] — treat numframes as batch N for interpolate.
 				clean_ref = seq_val.squeeze_()
 				if out_val.shape[-2:] != clean_ref.shape[-2:]:
-					clean_ref = F_ops.interpolate(clean_ref.unsqueeze(0), size=out_val.shape[-2:],
-					                              mode='bicubic', align_corners=False).squeeze(0)
+					if clean_ref.dim() == 3:   # single frame [C,H,W] → add batch dim
+						clean_ref = F_ops.interpolate(clean_ref.unsqueeze(0), size=out_val.shape[-2:],
+						                              mode='bicubic', align_corners=False).squeeze(0)
+					else:                       # multi-frame [numframes,C,H,W] → pass directly
+						clean_ref = F_ops.interpolate(clean_ref, size=out_val.shape[-2:],
+						                              mode='bicubic', align_corners=False)
 				psnr_val += batch_psnr(out_val.cpu(), clean_ref, 1.)
+
 
 			psnr_val /= len(dataset_val)
 
