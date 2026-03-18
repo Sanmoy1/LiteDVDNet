@@ -175,7 +175,7 @@ class SRHead(nn.Module):
     def forward(self, x):
         return self.conv(x)
 
-class LiteDVDNet(nn.Module):
+class SR_LiteDVDNet(nn.Module):
     """ Definition of the FastDVDnet model.
     Inputs of forward():
         xn: input frames of dim [N, C, H, W], (C=3 RGB)

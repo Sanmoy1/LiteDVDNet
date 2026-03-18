@@ -1,6 +1,6 @@
 # ======================= GENERAL SETTINGS =======================
 name: lite_dvd_train                    # experiment name (used for logging)
-model_name: LiteDVDNet                  # class name of the model (must match class in SR_litedvdnet.py)
+model_name: SR_LiteDVDNet                  # class name of the model (must match class in SR_litedvdnet.py)
 module: 'SR_litedvdnet'                 # python module — use SR_litedvdnet for SR, litedvdnet for original
 
 # ======================= MODEL ARCHITECTURE =======================
