@@ -10,7 +10,7 @@ model_params:
   inference_mode: Basic                 # inference strategy: "Basic" or "Cached" (cached reuses intermediate features)
   interm_ch: 30                         # intermediate channels in internal conv blocks
   simple_cv: false                      # if true, uses a simplified CvBlock (fewer params, less accuracy)
-  use_sr: false                         # set true to enable the SR upsampling head (2x/4x)
+  use_sr: true                         # set true to enable the SR upsampling head (2x/4x)
   scale: 2                              # SR upscale factor (used only when use_sr=true)
 
 # ======================= TRAINING SETTINGS =======================
