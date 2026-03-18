@@ -16,7 +16,7 @@ model_params:
 # ======================= TRAINING SETTINGS =======================
 manual_seed: 10                         # random seed for reproducibility
 use_cuda: true                          # use GPU for training (must be true for DALI dataloader)
-batch_size: 128                         # number of video clips per mini-batch (increase for better GPU utilization)
+batch_size: 64                         # number of video clips per mini-batch (increase for better GPU utilization)
 epochs: 20                              # total number of training epochs
 
 # ======================= RESUME TRAINING =======================
