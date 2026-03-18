@@ -20,7 +20,7 @@ batch_size: 128                         # number of video clips per mini-batch (
 epochs: 20                              # total number of training epochs
 
 # ======================= RESUME TRAINING =======================
-resume_training: true                   # if true, loads checkpoint from experiments_dir and continues training
+resume_training: false                   # if true, loads checkpoint from experiments_dir and continues training
 resume_dir: '/content/drive/MyDrive/lightdvdnet/experiments/litedvdnet_32_64_128_ich30'  # path to checkpoint folder
 experiments_dir: '/content/drive/MyDrive/lightdvdnet/experiments'  # root dir where experiment folders are saved
 
@@ -60,14 +60,14 @@ degradation:
   # --- Poisson Noise (Shot Noise) ---
   # Signal-dependent noise: brighter pixels get more noise. Models photon counting.
   poisson_noise:
-    enabled: true
+    enabled: false
     scale_range: [0.05, 0.5]            # lower scale = stronger noise (inverse relationship)
     prob: 0.5                            # 50% chance of applying per batch
 
   # --- Gaussian Blur ---
   # Models optical defocus / slight motion blur from camera.
   blur:
-    enabled: true
+    enabled: false
     kernel_sizes: [3, 5, 7]             # randomly picks one of these kernel sizes
     sigma_range: [0.5, 3.0]            # blur sigma — higher = more blur
     prob: 0.4                            # 40% chance of applying per batch
@@ -76,6 +76,6 @@ degradation:
   # Models codec blocking artifacts from video compression.
   # WARNING: runs on CPU (slower). Reduce prob if training speed drops.
   compression:
-    enabled: true
+    enabled: false
     quality_range: [20, 95]             # JPEG quality factor — lower = more blocking artifacts
     prob: 0.4                            # 40% chance of applying per batch

@@ -109,7 +109,12 @@ class TrainRunner:
 			isResumedTraining = args['resume_training']
 
 			if os.path.exists(args['log_dir']) and isResumedTraining is False:
-				raise ValueError("Folder with name {} already exists!".format(args['log_dir']))
+				# Archive the existing folder instead of crashing — renames it to {name}_archived_{timestamp}
+				import time as _time
+				archive_name = args['log_dir'] + '_archived_' + str(int(_time.time()))
+				os.rename(args['log_dir'], archive_name)
+				print(f"> Existing experiment folder archived to: {archive_name}")
+
 
 			# Init loggers
 			writer, logger = init_logging(args)

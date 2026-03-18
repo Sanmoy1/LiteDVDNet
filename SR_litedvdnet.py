@@ -184,7 +184,7 @@ class SR_LiteDVDNet(nn.Module):
 
     def __init__(self, num_input_frames=5, inference_mode='Basic', interm_ch=30, simple_cv=False,
                  channels=[32, 64, 128], pretrain_ckpt=None, use_sr=True, scale=2):
-        super(LiteDVDNet, self).__init__()
+        super(SR_LiteDVDNet, self).__init__()
         self.num_input_frames = num_input_frames
 
         self.inference_mode = InferenceMode[inference_mode]
