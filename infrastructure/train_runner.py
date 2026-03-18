@@ -279,11 +279,17 @@ class TrainRunner:
 				noise = torch.FloatTensor(seq_val.size()).normal_(mean=0, std=valnoisestd)
 				seqn_val = seq_val + noise
 				seqn_val = seqn_val.cuda()
-				sigma_noise = torch.cuda.FloatTensor([valnoisestd])
+				# Use modern tensor creation (replaces deprecated torch.cuda.FloatTensor)
+				sigma_noise = torch.tensor([valnoisestd], dtype=torch.float32, device='cuda')
 				numframes, C, H, W = seqn_val.shape
 				noise_map = sigma_noise.expand((1, 1, H, W))
 				out_val = self.denoise_seq(model=model, seq=seqn_val, noise_map=noise_map, temp_psz=temp_psz)
-				psnr_val += batch_psnr(out_val.cpu(), seq_val.squeeze_(), 1.)
+				# If model outputs HR (SR enabled), upsample clean ref to match before PSNR
+				clean_ref = seq_val.squeeze_()
+				if out_val.shape[-2:] != clean_ref.shape[-2:]:
+					clean_ref = F_ops.interpolate(clean_ref.unsqueeze(0), size=out_val.shape[-2:],
+					                              mode='bicubic', align_corners=False).squeeze(0)
+				psnr_val += batch_psnr(out_val.cpu(), clean_ref, 1.)
 
 			psnr_val /= len(dataset_val)
 
@@ -304,7 +310,7 @@ class TrainRunner:
 		numframes, C, H, W = seq.shape
 		ctrlfr_idx = int((temp_psz-1)//2)
 		inframes = list()
-		denframes = torch.empty((numframes, C, H, W)).to(seq.device)
+		denframes = None   # allocated lazily from first output (handles SR size automatically)
 
 		for fridx in range(numframes):
 			# load input frames
@@ -320,8 +326,15 @@ class TrainRunner:
 
 			inframes_t = torch.stack(inframes, dim=0).contiguous().view((1, temp_psz*C, H, W)).to(seq.device)
 
-			# append result to output list
-			denframes[fridx] = torch.clamp(model(inframes_t, noise_map), 0., 1.)
+			# run model
+			out_frame = torch.clamp(model(inframes_t, noise_map), 0., 1.)  # [1, C, H_out, W_out]
+
+			# allocate denframes on first iteration using actual output shape (SR-safe)
+			if denframes is None:
+				_, C_out, H_out, W_out = out_frame.shape
+				denframes = torch.empty((numframes, C_out, H_out, W_out)).to(seq.device)
+
+			denframes[fridx] = out_frame.squeeze(0)
 
 		# free memory up
 		del inframes
