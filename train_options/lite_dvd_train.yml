@@ -7,7 +7,7 @@ module: 'SR_litedvdnet'                 # python module — use SR_litedvdnet fo
 model_params:
   num_input_frames: 5                   # number of temporal frames the model takes as input (t-2, t-1, t, t+1, t+2)
   channels: [32, 64, 128]              # feature channels at each encoder scale (3 scales = 2 downsampling levels)
-  inference_mode: Basic                 # inference strategy: "Basic" or "Cached" (cached reuses intermediate features)
+  inference_mode: Basic                 # inference strategy: "Basic" or "Cached" (cached reuses intermediate features (frames))
   interm_ch: 30                         # intermediate channels in internal conv blocks
   simple_cv: false                      # if true, uses a simplified CvBlock (fewer params, less accuracy)
   use_sr: true                         # set true to enable the SR upsampling head (2x/4x)

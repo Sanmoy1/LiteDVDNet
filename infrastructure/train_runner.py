@@ -14,12 +14,13 @@ from dataset import ValDataset
 from train_common import resume_training, save_model_checkpoint, need_ortog, binary_lr_scheduler
 from utils import normalize_augment, init_logging, svd_orthogonalization, close_logger, load_options, batch_psnr
 from degradation import apply_complex_degradation
+from skimage.metrics import structural_similarity as ssim
 
 
 class TrainRunner:
 	def __init__(self, options_path: str):
 		self.options_path = options_path
-		self.options = self.parse_options(options_path)
+		self.options = self.parse_options(options_path) #dictionary for noise parameters
 
 	def parse_options(self, options_path) -> dict:
 
@@ -44,7 +45,7 @@ class TrainRunner:
 
 		return instance
 
-	def set_seed(self, args):
+	def set_seed(self, args): #for similar initial weights for reproducibility
 		seed = args['manual_seed']
 
 		if seed is None:
@@ -180,9 +181,11 @@ class TrainRunner:
 					# stdn is the Gaussian noise std used as the noise_map estimate for the model
 					imgn_train, stdn = apply_complex_degradation(img_train, args['degradation'])
 
+					#imgn_train -> LQ
+
 					noise_map = stdn.expand((N, 1, H, W))  # one channel per image, already on GPU
 
-					# Evaluate model and optimize it
+					# Evaluate model and optimize it (model output)
 					out_train = model(imgn_train, noise_map)
 
 					# Compute loss
@@ -193,7 +196,7 @@ class TrainRunner:
 						gt_for_loss = F_ops.interpolate(gt_train, scale_factor=sr_scale,
 						                                mode='bicubic', align_corners=False).clamp(0., 1.)
 					else:
-						gt_for_loss = gt_train
+						gt_for_loss = gt_train #gt_for_loss -> GT (no Super Resolution)
 					loss = criterion(gt_for_loss, out_train) / (N * 2)
 					loss.backward()
 					optimizer.step()
@@ -216,9 +219,10 @@ class TrainRunner:
 				# Validation
 				if len(dataset_val) > 0:
 					psnr_val = self.calculate_psnr(model, dataset_val, args['val_noiseL'], args['temp_patch_size'])
+					ssim_val = self.calculate_ssim(model, dataset_val, args['val_noiseL'], args['temp_patch_size'])
 					# Log validation results
-					print(f"[epoch {epoch}] PSNR: {psnr_val:.4f}")
-					logger.info(f"[epoch {epoch}] PSNR: {psnr_val:.4f}")
+					print(f"[epoch {epoch}] PSNR: {psnr_val:.4f}, SSIM: {ssim_val:.4f}")
+					logger.info(f"[epoch {epoch}] PSNR: {psnr_val:.4f}, SSIM: {ssim_val:.4f}")
 				else:
 					print(f"[epoch {epoch}] Validation skipped (no validation data found)")
 
@@ -300,6 +304,67 @@ class TrainRunner:
 			psnr_val /= len(dataset_val)
 
 		return psnr_val
+	
+	#SSIM calculation
+	def calculate_ssim(self, model, dataset_val, valnoisestd, temp_psz):
+		"""Validation step after the epoch finished (SSIM)"""
+		ssim_val = 0
+		total_frames=0
+
+		with torch.no_grad():
+			for seq_val in dataset_val:
+				noise = torch.FloatTensor(seq_val.size()).normal_(mean=0, std=valnoisestd)
+				seqn_val = seq_val + noise
+				seqn_val = seqn_val.cuda()
+
+				sigma_noise = torch.tensor([valnoisestd], dtype=torch.float32, device='cuda')
+				numframes, C, H, W = seqn_val.shape
+				total_frames+=numframes
+				noise_map = sigma_noise.expand((1, 1, H, W))
+
+				out_val = self.denoise_seq(
+					model=model,
+					seq=seqn_val,
+					noise_map=noise_map,
+					temp_psz=temp_psz
+				)
+
+				clean_ref = seq_val.squeeze_()
+
+				if out_val.shape[-2:] != clean_ref.shape[-2:]:
+					if clean_ref.dim() == 3:
+						clean_ref = F_ops.interpolate(
+							clean_ref.unsqueeze(0),
+							size=out_val.shape[-2:],
+							mode='bicubic',
+							align_corners=False
+						).squeeze(0)
+					else:
+						clean_ref = F_ops.interpolate(
+							clean_ref,
+							size=out_val.shape[-2:],
+							mode='bicubic',
+							align_corners=False
+						)
+
+				# ---- SSIM computation ----
+				out_np = out_val.cpu().numpy()
+				clean_np = clean_ref.cpu().numpy()
+
+				# Compute SSIM per frame and average
+				for i in range(out_np.shape[0]):
+					ssim_frame = ssim(
+						clean_np[i].transpose(1, 2, 0),
+						out_np[i].transpose(1, 2, 0),
+						data_range=1.0,
+						channel_axis=2
+					)
+					ssim_val += ssim_frame
+
+		# normalize by total frames
+		ssim_val /= (len(dataset_val) * total_frames)
+
+		return ssim_val
 
 	def denoise_seq(self, model, seq, noise_map, temp_psz):
 		r"""Denoises a sequence of frames with FastDVDnet.
