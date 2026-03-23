@@ -8,9 +8,12 @@ test_settings:
   suffix: ".png"
   save_path: "/content/drive/MyDrive/lightdvdnet/results"
   gray: false
-  calculate_strred: true,
+  calculate_strred: true
   calculate_ssim: true
+  use_sr: true                  # set true when testing an SR model (upsamples LR reference for fair PSNR)
+  sr_scale: 2                   # SR upscale factor — must match model's scale param
   noise_sigma: [30]
+
 test_cases:
 - id: hypersmooth
   test_data_path: "/content/drive/MyDrive/lightdvdnet/dataset/Set8/hypersmooth"

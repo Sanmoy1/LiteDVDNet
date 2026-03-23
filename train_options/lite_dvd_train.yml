@@ -10,8 +10,12 @@ model_params:
   inference_mode: Basic                 # inference strategy: "Basic" or "Cached" (cached reuses intermediate features (frames))
   interm_ch: 30                         # intermediate channels in internal conv blocks
   simple_cv: false                      # if true, uses a simplified CvBlock (fewer params, less accuracy)
-  use_sr: true                         # set true to enable the SR upsampling head (2x/4x)
+  use_sr: true                          # set true to enable the SR upsampling head (2x/4x)
   scale: 2                              # SR upscale factor (used only when use_sr=true)
+  stage: 1                              # training stage — controls folder suffix (_s2, _s3 etc.)
+                                        # Stage 2 fine-tuning: set stage=2, pretrain_ckpt=<stage1.pth>, resume_training=false, lower lr
+  # pretrain_ckpt: ''                   # uncomment for stage 2: path to stage 1 .pth weights file
+
 
 # ======================= TRAINING SETTINGS =======================
 manual_seed: 10                         # random seed for reproducibility

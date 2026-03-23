@@ -140,14 +140,30 @@ class TestRunner:
 
         with torch.no_grad():
             # process data
-            with torch.cuda.amp.autocast(True):
+            with torch.amp.autocast('cuda'):
                 original_seq, loadtime = self.load_sequence(test_case, device)
                 noisy_seq, denoised_seq, runtime = self.denoise_sequence(original_seq, loaded_model, test_case, device)
 
         strred_score = 0
         ssim_score = 0
-        psnr = batch_psnr(denoised_seq, original_seq, 1., False)
-        psnr_noisy = batch_psnr(noisy_seq.squeeze(), original_seq, 1., False)
+
+        # Read SR settings explicitly from test config (backward compatible: defaults to no SR)
+        use_sr   = self.test_settings.get('use_sr', False)
+        sr_scale = self.test_settings.get('sr_scale', 1)
+
+        # When SR is on, upsample the LR clean/noisy references to HR for a fair PSNR comparison
+        ref_seq   = original_seq
+        ref_noisy = noisy_seq.squeeze()
+        if use_sr and sr_scale > 1:
+            import torch.nn.functional as F
+            ref_seq   = F.interpolate(original_seq, scale_factor=sr_scale,
+                                      mode='bicubic', align_corners=False).clamp(0., 1.)
+            ref_noisy = F.interpolate(noisy_seq.squeeze(), scale_factor=sr_scale,
+                                      mode='bicubic', align_corners=False).clamp(0., 1.)
+
+        psnr       = batch_psnr(denoised_seq, ref_seq,   1., False)
+        psnr_noisy = batch_psnr(ref_noisy,    ref_seq,   1., False)
+
         seq_length = original_seq.size()[0]
         average_frame_time = runtime / seq_length
 
@@ -268,7 +284,7 @@ class TestRunner:
         numframes, C, H, W = seq.shape
         ctrlfr_idx = int((temp_psz - 1) // 2)
         inframes = list()
-        denframes = torch.empty((numframes, C, H, W)).to(seq.device)
+        denframes = None  # allocated lazily from first output (SR-safe: output may be 2× input size)
 
         for fridx in range(numframes):
             # load input frames
@@ -284,8 +300,15 @@ class TestRunner:
 
             inframes_t = torch.stack(inframes, dim=0).contiguous().view((1, temp_psz * C, H, W)).to(seq.device)
 
-            # append result to output list
-            denframes[fridx] = torch.clamp(model(inframes_t, noise_map), 0., 1.)
+            # run model
+            out_frame = torch.clamp(model(inframes_t, noise_map), 0., 1.)  # [1, C, H_out, W_out]
+
+            # allocate denframes on first iteration using actual output shape (SR-safe)
+            if denframes is None:
+                _, C_out, H_out, W_out = out_frame.shape
+                denframes = torch.empty((numframes, C_out, H_out, W_out)).to(seq.device)
+
+            denframes[fridx] = out_frame.squeeze(0)
 
         # free memory up
         del inframes
@@ -294,6 +317,7 @@ class TestRunner:
 
         # convert to appropiate type and return
         return denframes
+
 
 
 

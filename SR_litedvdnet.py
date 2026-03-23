@@ -183,7 +183,7 @@ class SR_LiteDVDNet(nn.Module):
     """
 
     def __init__(self, num_input_frames=5, inference_mode='Basic', interm_ch=30, simple_cv=False,
-                 channels=[32, 64, 128], pretrain_ckpt=None, use_sr=True, scale=2):
+                 channels=[32, 64, 128], pretrain_ckpt=None, use_sr=True, scale=2, stage=1):
         super(SR_LiteDVDNet, self).__init__()
         self.num_input_frames = num_input_frames
 
@@ -191,8 +191,9 @@ class SR_LiteDVDNet(nn.Module):
         self.simple_cv = simple_cv
         self.interm_ch = interm_ch
 
-        self.use_sr=use_sr
-        self.scale=scale
+        self.use_sr = use_sr
+        self.scale  = scale
+        self.stage  = stage  # training stage (1=initial, 2=fine-tune); affects folder name only
 
         self.prev_den_frame = None
         self.current_den_frame = None
@@ -220,8 +221,9 @@ class SR_LiteDVDNet(nn.Module):
         chs_lyr2 = self.channels[2]
         simple_cv = "_s" if self.simple_cv else ""
         interm_ch = self.interm_ch
-        sr_suffix = f'_sr{self.scale}x' if self.use_sr else ''
-        return f'{__class__.__name__.lower()}_{chs_lyr0}_{chs_lyr1}_{chs_lyr2}_ich{interm_ch}{simple_cv}{sr_suffix}'
+        sr_suffix    = f'_sr{self.scale}x' if self.use_sr else ''
+        stage_suffix = f'_stage{self.stage}'   if self.stage > 1 else ''
+        return f'{__class__.__name__.lower()}_{chs_lyr0}_{chs_lyr1}_{chs_lyr2}_ich{interm_ch}{simple_cv}{sr_suffix}{stage_suffix}'
 
     def are_buffers_empty(self) -> bool:
         return self.prev_den_frame is None and self.current_den_frame is None and self.future_den_frame is None
