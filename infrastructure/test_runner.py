@@ -192,14 +192,24 @@ class TestRunner:
             frames = self.test_settings['max_num_fr_per_seq']
             orig_video_path = create_video_from_images(original_data_folder,f'{filename}_original.mp4', experiment_folder,frames, 30)
             denoised_video_path = create_video_from_images(experiment_folder,f'{filename}_denoised.mp4',experiment_folder,frames, 30)
+
             if self.options['test_settings']['calculate_strred']:
-                strred_score = calculate_strred(orig_video_path, denoised_video_path, frames)
-                self.log(f'ST-RRED score: {strred_score}')
+                if use_sr and sr_scale > 1:
+                    # ST-RRED requires identical resolutions — LR original vs HR denoised is invalid
+                    self.log('ST-RRED skipped: SR model outputs HR frames, cannot compare with LR original video.')
+                else:
+                    strred_score = calculate_strred(orig_video_path, denoised_video_path, frames)
+                    self.log(f'ST-RRED score: {strred_score}')
 
             if self.options['test_settings']['calculate_ssim']:
-                ssim_score_array = calculate_ssim(orig_video_path, denoised_video_path, frames)
-                ssim_score = np.mean(np.array(ssim_score_array))
-                self.log(f'SSIM score: {ssim_score}')
+                if use_sr and sr_scale > 1:
+                    # Same resolution constraint — skip video-based SSIM for SR models
+                    self.log('Video SSIM skipped: SR model outputs HR frames, cannot compare with LR original video.')
+                else:
+                    ssim_score_array = calculate_ssim(orig_video_path, denoised_video_path, frames)
+                    ssim_score = np.mean(np.array(ssim_score_array))
+                    self.log(f'SSIM score: {ssim_score}')
+
 
 
 
