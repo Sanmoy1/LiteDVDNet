@@ -151,18 +151,21 @@ class TestRunner:
         use_sr   = self.test_settings.get('use_sr', False)
         sr_scale = self.test_settings.get('sr_scale', 1)
 
-        # When SR is on, upsample the LR clean/noisy references to HR for a fair PSNR comparison
+        # When SR is on, upsample the LR clean/noisy references to exactly match
+        # the denoised output size (safer than scale_factor, handles padding edge cases)
         ref_seq   = original_seq
         ref_noisy = noisy_seq.squeeze()
         if use_sr and sr_scale > 1:
             import torch.nn.functional as F
-            ref_seq   = F.interpolate(original_seq, scale_factor=sr_scale,
+            out_size  = denoised_seq.shape[-2:]          # actual H×W of SR output
+            ref_seq   = F.interpolate(original_seq, size=out_size,
                                       mode='bicubic', align_corners=False).clamp(0., 1.)
-            ref_noisy = F.interpolate(noisy_seq.squeeze(), scale_factor=sr_scale,
+            ref_noisy = F.interpolate(noisy_seq.squeeze(), size=out_size,
                                       mode='bicubic', align_corners=False).clamp(0., 1.)
 
         psnr       = batch_psnr(denoised_seq, ref_seq,   1., False)
         psnr_noisy = batch_psnr(ref_noisy,    ref_seq,   1., False)
+
 
         seq_length = original_seq.size()[0]
         average_frame_time = runtime / seq_length
@@ -230,6 +233,8 @@ class TestRunner:
     def denoise_sequence(self, original_seq, model_temp, test_case, device):
 
         noise_level = test_case['noise_sigma'] / 255
+        use_sr   = self.test_settings.get('use_sr', False)
+        sr_scale = self.test_settings.get('sr_scale', 1)
 
         # Add noise
         noise = torch.empty_like(original_seq).normal_(mean=0, std=noise_level).to(device)
@@ -249,8 +254,20 @@ class TestRunner:
 
         denoising_time = time.time() - start_time
 
-        denoised_seq = remove_padding(original_seq, denoised_seq)
+        # SR-aware padding removal:
+        # remove_padding crops by comparing shapes of ref vs denoised.
+        # When SR is on, denoised is sr_scale× larger — we pass a scaled version
+        # of padded_noisyseq so only the padding (not the SR upscale) is removed.
+        if use_sr and sr_scale > 1:
+            import torch.nn.functional as F_pad
+            scaled_noisy = F_pad.interpolate(padded_noisyseq, scale_factor=sr_scale,
+                                             mode='bicubic', align_corners=False)
+            denoised_seq = remove_padding(scaled_noisy, denoised_seq)
+        else:
+            denoised_seq = remove_padding(original_seq, denoised_seq)
+
         return noisy_seq, denoised_seq, denoising_time
+
 
     def save_out_seq(self, noisy_seq, denoised_seq, save_dir, filename, fext, save_noisy):
         """Saves the denoised and noisy sequences under save_dir
