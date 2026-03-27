@@ -26,7 +26,7 @@ epochs: 30                              # total number of training epochs
 
 # ======================= RESUME TRAINING =======================
 resume_training: true                   # if true, loads checkpoint from experiments_dir and continues training
-resume_dir: '/content/drive/MyDrive/lightdvdnet/experiments/sr_litedvdnet_32_64_128_ich30_sr2x'  # path to checkpoint folder
+resume_dir: '/content/drive/MyDrive/lightdvdnet/experiments/sr_litedvdnet_16_32_64_ich10_s_sr2x'  # path to checkpoint folder
 experiments_dir: '/content/drive/MyDrive/lightdvdnet/experiments'  # root dir where experiment folders are saved
 
 # ======================= LEARNING RATE SCHEDULE =======================
