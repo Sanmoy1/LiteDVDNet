@@ -9,7 +9,7 @@ model_params:
   channels: [16, 32, 64]
   #channels: [32, 64, 128]              # feature channels at each encoder scale (3 scales = 2 downsampling levels)
   inference_mode: Basic                 # inference strategy: "Basic" or "Cached" (cached reuses intermediate features (frames))
-  interm_ch: 10                         # intermediate channels in internal conv blocks
+  interm_ch: 30                         # intermediate channels in internal conv blocks
   simple_cv: true                      # if true, uses a simplified CvBlock (fewer params, less accuracy)
   use_sr: true                          # set true to enable the SR upsampling head (2x/4x)
   scale: 2                              # SR upscale factor (used only when use_sr=true)
@@ -25,7 +25,7 @@ batch_size: 128                         # number of video clips per mini-batch (
 epochs: 80                              # total number of training epochs
 
 # ======================= RESUME TRAINING =======================
-resume_training: true                   # if true, loads checkpoint from experiments_dir and continues training
+resume_training: false                   # if true, loads checkpoint from experiments_dir and continues training
 resume_dir: '/content/drive/MyDrive/lightdvdnet/experiments/sr_litedvdnet_16_32_64_ich10_s_sr2x'  # path to checkpoint folder
 experiments_dir: '/content/drive/MyDrive/lightdvdnet/experiments'  # root dir where experiment folders are saved
 
