@@ -229,9 +229,9 @@ class SR_LiteDVDNet(nn.Module):
         return self.prev_den_frame is None and self.current_den_frame is None and self.future_den_frame is None
 
     def load(self, pretrain_ckpt):
-        state_temp_dict = torch.load(pretrain_ckpt)
+        state_temp_dict = torch.load(pretrain_ckpt, weights_only=True)
         state_dict = self.extract_dict(state_temp_dict, string_name="module.")
-        self.load_state_dict(state_dict)
+        self.load_state_dict(state_dict, strict=False)
 
     def extract_dict(self, ckpt_state, string_name, replace_name=''):
         m_dict = {}
