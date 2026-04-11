@@ -1,4 +1,4 @@
-id: final_comparison_sigma10
+id: DenoiseSR_Stage2_epoch20_sigma10
 models_to_compare: '/content/drive/MyDrive/lightdvdnet/models/comparison'
 test_settings:
   use_cuda: true
