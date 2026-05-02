@@ -132,7 +132,7 @@ class TrainRunner:
 			shutil.copy(self.options_path, options_copy_path)
 
 			# Define loss
-			criterion = nn.MSELoss(reduction='sum')
+			criterion = nn.L1Loss(reduction='sum')
 			criterion.cuda()
 
 			# Optimizer

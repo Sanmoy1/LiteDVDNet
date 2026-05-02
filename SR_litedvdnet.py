@@ -158,6 +158,16 @@ class DenBlock(nn.Module):
         x = denoisedFrame - x
 
         return x
+class ResBlock(nn.Module):
+    def __init__(self, channels):
+        super(ResBlock, self).__init__()
+        self.conv1 = nn.Conv2d(channels, channels, 3, 1, 1)
+        self.relu = nn.ReLU(inplace=True)
+        self.conv2 = nn.Conv2d(channels, channels, 3, 1, 1)
+
+    def forward(self, x):
+        return x + self.conv2(self.relu(self.conv1(x)))
+
 class SRHead(nn.Module):
     def __init__(self, scale=2, nf=64):
         super(SRHead, self).__init__()
@@ -168,6 +178,8 @@ class SRHead(nn.Module):
             nn.ReLU(inplace=True),
             nn.Conv2d(nf, nf, 3, 1, 1),
             nn.ReLU(inplace=True),
+            ResBlock(nf),
+            ResBlock(nf),
             nn.Conv2d(nf, 3 * (scale ** 2), 3, 1, 1),
             nn.PixelShuffle(scale)
         )
@@ -183,7 +195,7 @@ class SR_LiteDVDNet(nn.Module):
     """
 
     def __init__(self, num_input_frames=5, inference_mode='Basic', interm_ch=30, simple_cv=False,
-                 channels=[32, 64, 128], pretrain_ckpt=None, use_sr=True, scale=2, stage=1):
+                 channels=[32, 64, 128], pretrain_ckpt=None, use_sr=True, scale=2, stage=1, custom_suffix=''):
         super(SR_LiteDVDNet, self).__init__()
         self.num_input_frames = num_input_frames
 
@@ -194,6 +206,7 @@ class SR_LiteDVDNet(nn.Module):
         self.use_sr = use_sr
         self.scale  = scale
         self.stage  = stage  # training stage (1=initial, 2=fine-tune); affects folder name only
+        self.custom_suffix = custom_suffix
 
         self.prev_den_frame = None
         self.current_den_frame = None
@@ -223,7 +236,7 @@ class SR_LiteDVDNet(nn.Module):
         interm_ch = self.interm_ch
         sr_suffix    = f'_sr{self.scale}x' if self.use_sr else ''
         stage_suffix = f'_stage{self.stage}'   if self.stage > 1 else ''
-        return f'{__class__.__name__.lower()}_{chs_lyr0}_{chs_lyr1}_{chs_lyr2}_ich{interm_ch}{simple_cv}{sr_suffix}{stage_suffix}'
+        return f'{__class__.__name__.lower()}_{chs_lyr0}_{chs_lyr1}_{chs_lyr2}_ich{interm_ch}{simple_cv}{sr_suffix}{stage_suffix}{self.custom_suffix}'
 
     def are_buffers_empty(self) -> bool:
         return self.prev_den_frame is None and self.current_den_frame is None and self.future_den_frame is None

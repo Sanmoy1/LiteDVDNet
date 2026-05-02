@@ -1,5 +1,10 @@
 # ======================= GENERAL SETTINGS =======================
-name: lite_dvd_train_stage2                    # experiment name (used for logging)
+
+#Description
+# 1. Using extra added resblock for SR module head
+# 2. using l1 loss instead of l2 loss
+
+name: liteSR_dvd_train_stage2_L1LossV2                    # experiment name (used for logging)
 model_name: SR_LiteDVDNet                  # class name of the model (must match class in SR_litedvdnet.py)
 module: 'SR_litedvdnet'                 # python module — use SR_litedvdnet for SR, litedvdnet for original
 
@@ -14,6 +19,7 @@ model_params:
   use_sr: true                          # set true to enable the SR upsampling head (2x/4x)
   scale: 2                              # SR upscale factor (used only when use_sr=true)
   stage: 2                              # training stage — controls folder suffix (_s2, _s3 etc.)
+  custom_suffix: '_l1_loss_v2'          # custom string appended to the model name/folder (e.g., '_l1_loss_v2')
                                         # Stage 2 fine-tuning: set stage=2, pretrain_ckpt=<stage1.pth>, resume_training=false, lower lr
   pretrain_ckpt: '/content/drive/MyDrive/lightdvdnet/experiments/baseline/baseline.pth'                   # uncomment for stage 2: path to stage 1 .pth weights file
 
