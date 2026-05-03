@@ -120,7 +120,6 @@ class TrainRunner:
 			# Init loggers
 			writer, logger = init_logging(args)
 
-
 			# Show training characteristics
 			num_minibatches = int(args['max_number_patches'] // args['batch_size'])
 			ctrl_fr_idx = (args['temp_patch_size'] - 1) // 2
@@ -133,6 +132,7 @@ class TrainRunner:
 
 			# Define loss
 			criterion = nn.L1Loss(reduction='sum')
+			# criterion = nn.MSELoss(reduction='sum')
 			criterion.cuda()
 
 			# Optimizer
