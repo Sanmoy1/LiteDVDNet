@@ -180,7 +180,7 @@ class SRHead(nn.Module):
             nn.ReLU(inplace=True),
             # ResBlock(nf),
             # ResBlock(nf),
-            nn.Sequential(*[ResBlock(nf) for _ in range(8)]), # 8 resblock
+            *[ResBlock(nf) for _ in range(8)], # 8 resblock
             nn.Conv2d(nf, 3 * (scale ** 2), 3, 1, 1),
             nn.PixelShuffle(scale)
         )
@@ -212,7 +212,7 @@ class SR_LiteDVDNet_v2(nn.Module):
 
     def __init__(self, num_input_frames=5, inference_mode='Basic', interm_ch=30, simple_cv=False,
                  channels=[32, 64, 128], pretrain_ckpt=None, use_sr=True, scale=2, stage=1, custom_suffix=''):
-        super(SR_LiteDVDNet, self).__init__()
+        super(SR_LiteDVDNet_v2, self).__init__()
         self.num_input_frames = num_input_frames
 
         self.inference_mode = InferenceMode[inference_mode]
@@ -237,7 +237,8 @@ class SR_LiteDVDNet_v2(nn.Module):
         # Define SR upsampling head (only when use_sr=True — backward compatible)
         if self.use_sr:
             self.sr_head = SRHead(scale=scale, nf=64)
-
+            
+        self.refine=Refinement()
         # Init weights
         self.reset_params()
 
@@ -357,7 +358,7 @@ class SR_LiteDVDNet_v2(nn.Module):
             )
 
             out = sr + bicubic
-
+            out = self.refine(out)
             # Shift buffers (keep original logic)
             self.prev_den_frame = self.current_den_frame
             self.current_den_frame = self.future_den_frame
