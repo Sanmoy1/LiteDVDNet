@@ -5,8 +5,8 @@
 # 2. using l1 loss instead of l2 loss
 
 name: liteSR_dvd_train_stage2_L1LossV2                    # experiment name (used for logging)
-model_name: SR_LiteDVDNet                  # class name of the model (must match class in SR_litedvdnet.py)
-module: 'SR_litedvdnet'                 # python module — use SR_litedvdnet for SR, litedvdnet for original
+model_name: SR_LiteDVDNet_v2                  # class name of the model (must match class in SR_litedvdnet.py)
+module: 'SR_litedvdnet_v2'                 # python module — use SR_litedvdnet for SR, litedvdnet for original
 
 # ======================= MODEL ARCHITECTURE =======================
 model_params:
