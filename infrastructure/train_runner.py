@@ -177,27 +177,33 @@ class TrainRunner:
 					img_train = img_train.cuda(non_blocking=True)
 					gt_train = gt_train.cuda(non_blocking=True)
 
+					# Apply True SR logic: If SR is enabled, treat img_train/gt_train as HR.
+					# Downsample img_train to create the LR input for the model.
+					sr_scale = args['model_params'].get('scale', 1)
+					use_sr = args['model_params'].get('use_sr', False)
+					
+					if use_sr and sr_scale > 1:
+						img_train_lr = F_ops.interpolate(img_train, scale_factor=1.0/sr_scale,
+						                                 mode='bicubic', align_corners=False).clamp(0., 1.)
+					else:
+						img_train_lr = img_train
+
 					# Apply complex degradation pipeline (Gaussian + Poisson + Blur + JPEG)
 					# stdn is the Gaussian noise std used as the noise_map estimate for the model
-					imgn_train, stdn = apply_complex_degradation(img_train, args['degradation'])
+					imgn_train_lr, stdn = apply_complex_degradation(img_train_lr, args['degradation'])
 
-					#imgn_train -> LQ
-
-					noise_map = stdn.expand((N, 1, H, W))  # one channel per image, already on GPU
+					# imgn_train_lr -> LQ
+					
+					# noise_map size needs to match the LR dimensions
+					_, _, H_lr, W_lr = imgn_train_lr.size()
+					noise_map = stdn.expand((N, 1, H_lr, W_lr))  # one channel per image, already on GPU
 
 					# Evaluate model and optimize it (model output)
-					out_train = model(imgn_train, noise_map)
+					out_train = model(imgn_train_lr, noise_map)
 
 					# Compute loss
-					# If SR is enabled, model outputs HR — upsample LR ground truth to match.
-					# When use_sr=False (or scale=1), gt_for_loss == gt_train (backward compatible).
-					sr_scale = args['model_params'].get('scale', 1)
-					if args['model_params'].get('use_sr', False) and sr_scale > 1:
-						gt_for_loss = F_ops.interpolate(gt_train, scale_factor=sr_scale,
-						                                mode='bicubic', align_corners=False).clamp(0., 1.)
-					else:
-						gt_for_loss = gt_train #gt_for_loss -> GT (no Super Resolution)
-					loss = criterion(gt_for_loss, out_train) / (N * 2)
+					# In True SR, the model outputs HR. Compare directly to the original HR gt_train.
+					loss = criterion(gt_train, out_train) / (N * 2)
 					loss.backward()
 					optimizer.step()
 
@@ -282,23 +288,42 @@ class TrainRunner:
 		ssim_val   = 0.0
 		total_frames = 0
 
+		if hasattr(model, 'module'):
+			use_sr = getattr(model.module, 'use_sr', False)
+			sr_scale = getattr(model.module, 'scale', 1)
+		else:
+			use_sr = getattr(model, 'use_sr', False)
+			sr_scale = getattr(model, 'scale', 1)
+
 		with torch.no_grad():
 			for seq_val in dataset_val:
-				# --- add noise ---
-				noise    = torch.FloatTensor(seq_val.size()).normal_(mean=0, std=valnoisestd)
-				seqn_val = (seq_val + noise).cuda()
+				seq_val_gpu = seq_val.cuda()
+				
+				# --- true SR logic: downsample HR sequence to LR ---
+				if use_sr and sr_scale > 1:
+					seq_val_lr = F_ops.interpolate(seq_val_gpu, scale_factor=1.0/sr_scale,
+					                               mode='bicubic', align_corners=False).clamp(0., 1.)
+				else:
+					seq_val_lr = seq_val_gpu
+
+				# --- add noise to LR sequence ---
+				noise    = torch.FloatTensor(seq_val_lr.size()).normal_(mean=0, std=valnoisestd).cuda()
+				seqn_val_lr = (seq_val_lr + noise)
 
 				sigma_noise = torch.tensor([valnoisestd], dtype=torch.float32, device='cuda')
-				numframes, C, H, W = seqn_val.shape
-				noise_map = sigma_noise.expand((1, 1, H, W))
+				numframes, C, H_lr, W_lr = seqn_val_lr.shape
+				noise_map = sigma_noise.expand((1, 1, H_lr, W_lr))
 
 				# --- run model once ---
-				out_val = self.denoise_seq(model=model, seq=seqn_val,
+				out_val = self.denoise_seq(model=model, seq=seqn_val_lr,
 				                          noise_map=noise_map, temp_psz=temp_psz)
 
-				# --- build clean reference (SR-aware) ---
-				# seq_val is [numframes, C, H, W]; keep it that way for interpolate
-				clean_ref = seq_val.squeeze_()
+				# --- build clean reference ---
+				# Since out_val is HR (if SR) and seq_val_gpu is the original HR,
+				# we can compare them directly. No upsampling of clean reference needed!
+				clean_ref = seq_val_gpu.squeeze_()
+				
+				# Just a safety check in case of off-by-one padding issues
 				if out_val.shape[-2:] != clean_ref.shape[-2:]:
 					if clean_ref.dim() == 3:   # single frame [C, H, W]
 						clean_ref = F_ops.interpolate(clean_ref.unsqueeze(0),

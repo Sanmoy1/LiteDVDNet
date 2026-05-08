@@ -4,9 +4,9 @@
 # 1. Using extra added resblock for SR module head
 # 2. using l1 loss instead of l2 loss
 
-name: liteSR_dvd_train_stage2_L1LossV2                    # experiment name (used for logging)
-model_name: SR_LiteDVDNet_v2                  # class name of the model (must match class in SR_litedvdnet.py)
-module: 'SR_litedvdnet_v2'                 # python module — use SR_litedvdnet for SR, litedvdnet for original
+name: liteSR_dvd_train_stage2_V2                    # experiment name (used for logging)
+model_name: SR_LiteDVDNet                  # class name of the model (must match class in SR_litedvdnet.py)
+module: 'SR_litedvdnet'                 # python module — use SR_litedvdnet for SR, litedvdnet for original
 
 # ======================= MODEL ARCHITECTURE =======================
 model_params:
@@ -19,7 +19,7 @@ model_params:
   use_sr: true                          # set true to enable the SR upsampling head (2x/4x)
   scale: 2                              # SR upscale factor (used only when use_sr=true)
   stage: 2                              # training stage — controls folder suffix (_s2, _s3 etc.)
-  custom_suffix: '_l1_loss_v2'          # custom string appended to the model name/folder (e.g., '_l1_loss_v2')
+  custom_suffix: 'v2'          # custom string appended to the model name/folder (e.g., '_l1_loss_v2')
                                         # Stage 2 fine-tuning: set stage=2, pretrain_ckpt=<stage1.pth>, resume_training=false, lower lr
   pretrain_ckpt: '/content/drive/MyDrive/lightdvdnet/experiments/baseline/baseline.pth'                   # uncomment for stage 2: path to stage 1 .pth weights file
 
@@ -50,7 +50,7 @@ noise_ival: [5, 55]                     # noise std range in [0,255] scale — u
 val_noiseL: 25.0                        # fixed noise std (in [0,255]) added during validation PSNR calculation
 
 # ======================= DATA SETTINGS =======================
-patch_size: 96                          # spatial crop size (H=W=96 pixels) for each training sample
+patch_size: 192                          # spatial crop size (H=W=96 pixels) for each training sample
 temp_patch_size: 5                      # number of consecutive frames per training clip (must match num_input_frames)
 max_number_patches: 32000               # total number of training samples per epoch (epoch_size)
 trainset_dir: '/content/drive/MyDrive/lightdvdnet/dataset/devis2017'         # path to folder with training .mp4 video files
