@@ -306,6 +306,19 @@ class TrainRunner:
 				else:
 					seq_val_lr = seq_val_gpu
 
+				# --- align dimensions to multiples of 4 (U-Net skip-connection safety) ---
+				# The 2-level U-Net requires H and W divisible by 4.
+				# LR dims: align to nearest multiple of 4
+				# HR dims: align to same multiple of (4 * sr_scale) so model output matches clean_ref exactly
+				_, _, H_lr, W_lr = seq_val_lr.shape
+				H_lr_crop = (H_lr // 4) * 4
+				W_lr_crop = (W_lr // 4) * 4
+				seq_val_lr   = seq_val_lr[:, :, :H_lr_crop, :W_lr_crop]
+				# Keep HR ref in sync: each LR pixel = sr_scale HR pixels
+				H_hr_crop = H_lr_crop * sr_scale
+				W_hr_crop = W_lr_crop * sr_scale
+				seq_val_gpu  = seq_val_gpu[:, :, :H_hr_crop, :W_hr_crop]
+
 				# --- add noise to LR sequence ---
 				noise    = torch.FloatTensor(seq_val_lr.size()).normal_(mean=0, std=valnoisestd).cuda()
 				seqn_val_lr = (seq_val_lr + noise)
@@ -313,6 +326,7 @@ class TrainRunner:
 				sigma_noise = torch.tensor([valnoisestd], dtype=torch.float32, device='cuda')
 				numframes, C, H_lr, W_lr = seqn_val_lr.shape
 				noise_map = sigma_noise.expand((1, 1, H_lr, W_lr))
+
 
 				# --- run model once ---
 				out_val = self.denoise_seq(model=model, seq=seqn_val_lr,
