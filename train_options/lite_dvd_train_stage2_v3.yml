@@ -1,8 +1,8 @@
 # ======================= GENERAL SETTINGS =======================
 
 #Description
-# 1. Using extra added resblock for SR module head
-# 2. using l1 loss instead of l2 loss
+# 1. Using 2 extra added resblock for SR module head
+# 2. using CharbonnierLoss
 
 name: liteSR_dvd_train_stage2_V2                    # experiment name (used for logging)
 model_name: SR_LiteDVDNet                  # class name of the model (must match class in SR_litedvdnet.py)
@@ -19,7 +19,7 @@ model_params:
   use_sr: true                          # set true to enable the SR upsampling head (2x/4x)
   scale: 2                              # SR upscale factor (used only when use_sr=true)
   stage: 2                              # training stage — controls folder suffix (_s2, _s3 etc.)
-  custom_suffix: 'v2'          # custom string appended to the model name/folder (e.g., '_l1_loss_v2')
+  custom_suffix: 'v2_CharbonnierLoss'          # custom string appended to the model name/folder (e.g., '_l1_loss_v2')
                                         # Stage 2 fine-tuning: set stage=2, pretrain_ckpt=<stage1.pth>, resume_training=false, lower lr
   pretrain_ckpt: '/content/drive/MyDrive/lightdvdnet/experiments/baseline/baseline.pth'                   # uncomment for stage 2: path to stage 1 .pth weights file
 
@@ -28,7 +28,7 @@ model_params:
 manual_seed: 10                         # random seed for reproducibility
 use_cuda: true                          # use GPU for training (must be true for DALI dataloader)
 batch_size: 96                         # number of video clips per mini-batch (increase for better GPU utilization)
-epochs: 40                              # total number of training epochs
+epochs: 80                              # total number of training epochs
 
 # ======================= RESUME TRAINING =======================
 resume_training: false                   # if true, loads checkpoint from experiments_dir and continues training
@@ -39,7 +39,7 @@ experiments_dir: '/content/drive/MyDrive/lightdvdnet/experiments'  # root dir wh
 milestones: [3, 4, 25, 70]             # epoch numbers at which LR changes (used by lr_scheduler, not active — binary_lr_scheduler is used instead)
 learning_rates: [0.01, 0.001, 0.0001, 0.000001]  # LR values corresponding to milestones (not active — see above)
 orthog_epochs: 10                       # apply SVD orthogonalization regularization for the first N epochs
-lr: 0.0001                                # initial learning rate (halved every 10 epochs by binary_lr_scheduler)
+lr: 0.0001                               # initial learning rate (halved every 10 epochs by binary_lr_scheduler)
 
 # ======================= LOGGING & CHECKPOINTING =======================
 save_every: 10                          # print training loss every N mini-batches

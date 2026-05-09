@@ -131,9 +131,22 @@ class TrainRunner:
 			shutil.copy(self.options_path, options_copy_path)
 
 			# Define loss
-			criterion = nn.L1Loss(reduction='sum')
-			# criterion = nn.MSELoss(reduction='sum')
+			# Charbonnier Loss: sqrt((y-y_hat)^2 + eps^2) — smooth L1, differentiable at 0,
+			# widely used in SR for sharper results and more stable gradients than plain L1.
+			class CharbonnierLoss(nn.Module):
+				def __init__(self, eps=1e-3, reduction='sum'):
+					super().__init__()
+					self.eps = eps
+					self.reduction = reduction
+				def forward(self, pred, target):
+					loss = torch.sqrt((pred - target) ** 2 + self.eps ** 2)
+					return loss.sum() if self.reduction == 'sum' else loss.mean()
+
+			criterion = CharbonnierLoss(eps=1e-3, reduction='sum')
+			# criterion = nn.L1Loss(reduction='sum')      # commented out — replaced by Charbonnier
+			# criterion = nn.MSELoss(reduction='sum')     # commented out — MSE blurs SR outputs
 			criterion.cuda()
+
 
 			# Optimizer
 			optimizer = optim.Adam(model.parameters(), lr=args['lr'])

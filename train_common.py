@@ -76,10 +76,23 @@ def lr_scheduler(epoch, argdict):
 
 	return learning_rates[-1]
 
+# def binary_lr_scheduler(epoch, argdict):
+# 	learning_rate = argdict['lr']
+# 	k = epoch // 10
+# 	return learning_rate * (0.5 ** k)
+
 def binary_lr_scheduler(epoch, argdict):
-	learning_rate = argdict['lr']
-	k = epoch // 10
-	return learning_rate * (0.5 ** k)
+
+    lr = argdict['lr']
+
+    if epoch < 30:
+        return lr
+
+    elif epoch < 60:
+        return lr * 0.5
+
+    else:
+        return lr * 0.25
 
 def save_model_checkpoint(model, argdict, optimizer, train_pars, epoch):
 	"""Stores the model parameters under 'argdict['log_dir'] + '/model_name.pth'
