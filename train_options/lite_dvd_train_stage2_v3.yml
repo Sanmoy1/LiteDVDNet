@@ -31,8 +31,8 @@ batch_size: 96                         # number of video clips per mini-batch (i
 epochs: 80                              # total number of training epochs
 
 # ======================= RESUME TRAINING =======================
-resume_training: false                   # if true, loads checkpoint from experiments_dir and continues training
-resume_dir: '/content/drive/MyDrive/lightdvdnet/experiments/sr_litedvdnet_32_64_128_ich30_sr2x_stage2_l1_loss_v2'  # path to checkpoint folder
+resume_training: true                   # if true, loads checkpoint from experiments_dir and continues training
+resume_dir: '/content/drive/MyDrive/lightdvdnet/experiments/sr_litedvdnet_32_64_128_ich30_sr2x_stage2v2_CharbonnierLoss'  # path to checkpoint folder
 experiments_dir: '/content/drive/MyDrive/lightdvdnet/experiments'  # root dir where experiment folders are saved
 
 # ======================= LEARNING RATE SCHEDULE =======================
