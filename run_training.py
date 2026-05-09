@@ -6,7 +6,7 @@ from infrastructure.train_runner import TrainRunner
 
 if __name__ == "__main__":
 
-	trainingPath = './train_options/lite_dvd_train_stage2.yml'
+	trainingPath = './train_options/lite_dvd_train_stage2_v3.yml'
 	trainRunner = TrainRunner(trainingPath)
 	options = trainRunner.get_options()
 
