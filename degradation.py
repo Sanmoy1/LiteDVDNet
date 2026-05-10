@@ -46,7 +46,7 @@ def add_gaussian_noise(x: torch.Tensor, sigma_range: list) -> tuple[torch.Tensor
             sigmas.append(random.uniform(mid, high))   # 70%: high noise [30/255, 55/255]
         else:
             sigmas.append(random.uniform(low, mid))    # 30%: low noise  [5/255,  30/255]
-    stdn = torch.empty((N, 1, 1, 1), device=x.device).uniform_(low, high)
+    stdn = torch.tensor(sigmas, dtype=torch.float32, device=x.device).view(N, 1, 1, 1)
     noise = torch.normal(mean=torch.zeros_like(x), std=stdn.expand_as(x))
     return torch.clamp(x + noise, 0., 1.), stdn
 
