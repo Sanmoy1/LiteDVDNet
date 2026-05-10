@@ -38,6 +38,14 @@ def add_gaussian_noise(x: torch.Tensor, sigma_range: list) -> tuple[torch.Tensor
     """
     N = x.size(0)
     low, high = sigma_range[0], sigma_range[1]
+    mid = 30 / 255.   # boundary between low-noise and high-noise bands (fixed at 30/255)
+    # Sample one sigma per image in the batch using the biased distribution
+    sigmas = []
+    for _ in range(N):
+        if random.random() < 0.7:
+            sigmas.append(random.uniform(mid, high))   # 70%: high noise [30/255, 55/255]
+        else:
+            sigmas.append(random.uniform(low, mid))    # 30%: low noise  [5/255,  30/255]
     stdn = torch.empty((N, 1, 1, 1), device=x.device).uniform_(low, high)
     noise = torch.normal(mean=torch.zeros_like(x), std=stdn.expand_as(x))
     return torch.clamp(x + noise, 0., 1.), stdn

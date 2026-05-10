@@ -1,12 +1,12 @@
 # ======================= GENERAL SETTINGS =======================
 
 #Description
-# 1. Using 2 extra added resblock for SR module head
+# 1. Using SR_litedvdnet_v3
 # 2. using CharbonnierLoss
 
-name: liteSR_dvd_train_stage2_V2                    # experiment name (used for logging)
-model_name: SR_LiteDVDNet                  # class name of the model (must match class in SR_litedvdnet.py)
-module: 'SR_litedvdnet'                 # python module — use SR_litedvdnet for SR, litedvdnet for original
+name: liteSRv3_dvd_train_stage2_V2                    # experiment name (used for logging)
+model_name: SR_LiteDVDNet_v3                  # class name of the model (must match class in SR_litedvdnet.py)
+module: 'SR_LiteDVDNet_v3'                 # python module — use SR_litedvdnet for SR, litedvdnet for original
 
 # ======================= MODEL ARCHITECTURE =======================
 model_params:
@@ -31,7 +31,7 @@ batch_size: 96                         # number of video clips per mini-batch (i
 epochs: 80                              # total number of training epochs
 
 # ======================= RESUME TRAINING =======================
-resume_training: true                   # if true, loads checkpoint from experiments_dir and continues training
+resume_training: false                   # if true, loads checkpoint from experiments_dir and continues training
 resume_dir: '/content/drive/MyDrive/lightdvdnet/experiments/sr_litedvdnet_32_64_128_ich30_sr2x_stage2v2_CharbonnierLoss'  # path to checkpoint folder
 experiments_dir: '/content/drive/MyDrive/lightdvdnet/experiments'  # root dir where experiment folders are saved
 
