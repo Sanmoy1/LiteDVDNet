@@ -19,7 +19,7 @@ model_params:
   use_sr: true                          # set true to enable the SR upsampling head (2x/4x)
   scale: 2                              # SR upscale factor (used only when use_sr=true)
   stage: 2                              # training stage — controls folder suffix (_s2, _s3 etc.)
-  custom_suffix: 'v2_CharbonnierLoss'          # custom string appended to the model name/folder (e.g., '_l1_loss_v2')
+  custom_suffix: 'CharbonnierLoss'          # custom string appended to the model name/folder (e.g., '_l1_loss_v2')
                                         # Stage 2 fine-tuning: set stage=2, pretrain_ckpt=<stage1.pth>, resume_training=false, lower lr
   pretrain_ckpt: '/content/drive/MyDrive/lightdvdnet/experiments/baseline/baseline.pth'                   # uncomment for stage 2: path to stage 1 .pth weights file
 
@@ -27,12 +27,12 @@ model_params:
 # ======================= TRAINING SETTINGS =======================
 manual_seed: 10                         # random seed for reproducibility
 use_cuda: true                          # use GPU for training (must be true for DALI dataloader)
-batch_size: 96                         # number of video clips per mini-batch (increase for better GPU utilization)
+batch_size: 192                         # number of video clips per mini-batch (increase for better GPU utilization)
 epochs: 80                              # total number of training epochs
 
 # ======================= RESUME TRAINING =======================
-resume_training: false                   # if true, loads checkpoint from experiments_dir and continues training
-resume_dir: '/content/drive/MyDrive/lightdvdnet/experiments/sr_litedvdnet_32_64_128_ich30_sr2x_stage2v2_CharbonnierLoss'  # path to checkpoint folder
+resume_training: true                   # if true, loads checkpoint from experiments_dir and continues training
+resume_dir: '/content/drive/MyDrive/lightdvdnet/experiments/sr_litedvdnet_v3_32_64_128_ich30_sr2x_stage2CharbonnierLoss'  # path to checkpoint folder
 experiments_dir: '/content/drive/MyDrive/lightdvdnet/experiments'  # root dir where experiment folders are saved
 
 # ======================= LEARNING RATE SCHEDULE =======================

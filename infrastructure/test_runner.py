@@ -151,17 +151,11 @@ class TestRunner:
         use_sr   = self.test_settings.get('use_sr', False)
         sr_scale = self.test_settings.get('sr_scale', 1)
 
-        # When SR is on, upsample the LR clean/noisy references to exactly match
-        # the denoised output size (safer than scale_factor, handles padding edge cases)
+        # SR: the model receives LR input and outputs HR.
+        # original_seq is the HR ground truth — compare SR output directly against it.
+        # (downsampling to LR happens inside denoise_sequence, matching the training pipeline)
         ref_seq   = original_seq
         ref_noisy = noisy_seq.squeeze()
-        if use_sr and sr_scale > 1:
-            import torch.nn.functional as F
-            out_size  = denoised_seq.shape[-2:]          # actual H×W of SR output
-            ref_seq   = F.interpolate(original_seq, size=out_size,
-                                      mode='bicubic', align_corners=False).clamp(0., 1.)
-            ref_noisy = F.interpolate(noisy_seq.squeeze(), size=out_size,
-                                      mode='bicubic', align_corners=False).clamp(0., 1.)
 
         psnr       = batch_psnr(denoised_seq, ref_seq,   1., False)
         psnr_noisy = batch_psnr(ref_noisy,    ref_seq,   1., False)
@@ -246,12 +240,21 @@ class TestRunner:
         use_sr   = self.test_settings.get('use_sr', False)
         sr_scale = self.test_settings.get('sr_scale', 1)
 
-        # Add noise
-        noise = torch.empty_like(original_seq).normal_(mean=0, std=noise_level).to(device)
-        noisy_seq = original_seq + noise
+        # --- True SR pipeline: GT → bicubic↓ → LR → + noise → LQ → model → SR output ---
+        # Matches the training pipeline in train_runner.py exactly.
+        if use_sr and sr_scale > 1:
+            import torch.nn.functional as F
+            seq_lr = F.interpolate(original_seq, scale_factor=1.0 / sr_scale,
+                                   mode='bicubic', align_corners=False).clamp(0., 1.)
+        else:
+            seq_lr = original_seq
+
+        # Add noise to LR sequence
+        noise = torch.empty_like(seq_lr).normal_(mean=0, std=noise_level).to(device)
+        noisy_seq = seq_lr + noise
         noisestd = torch.FloatTensor([noise_level]).to(device)
 
-        numframes, C, H, W = noisy_seq.shape
+        numframes, C, H, W = noisy_seq.shape   # H, W are now LR dims
         noise_map = noisestd.expand((1, 1, H, W))
         padded_noisyseq, padded_noisemap = apply_padding(noisy_seq, noise_map)
 
