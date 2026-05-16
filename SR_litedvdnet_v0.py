@@ -178,8 +178,8 @@ class SRHead(nn.Module):
             nn.ReLU(inplace=True),
             nn.Conv2d(nf, nf, 3, 1, 1),
             nn.ReLU(inplace=True),
-            # ResBlock(nf),
-            # ResBlock(nf),
+            ResBlock(nf),
+            ResBlock(nf),
             nn.Conv2d(nf, 3 * (scale ** 2), 3, 1, 1),
             nn.PixelShuffle(scale)
         )
@@ -187,7 +187,7 @@ class SRHead(nn.Module):
     def forward(self, x):
         return self.conv(x)
 
-class SR_LiteDVDNet(nn.Module):
+class SR_litedvdnet_v0(nn.Module):
     """ Definition of the FastDVDnet model.
     Inputs of forward():
         xn: input frames of dim [N, C, H, W], (C=3 RGB)
@@ -196,7 +196,7 @@ class SR_LiteDVDNet(nn.Module):
 
     def __init__(self, num_input_frames=5, inference_mode='Basic', interm_ch=30, simple_cv=False,
                  channels=[32, 64, 128], pretrain_ckpt=None, use_sr=True, scale=2, stage=1, custom_suffix=''):
-        super(SR_LiteDVDNet, self).__init__()
+        super(SR_litedvdnet_v0, self).__init__()
         self.num_input_frames = num_input_frames
 
         self.inference_mode = InferenceMode[inference_mode]

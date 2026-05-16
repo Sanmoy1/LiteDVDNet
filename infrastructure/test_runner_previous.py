@@ -18,7 +18,7 @@ from utils import batch_psnr, init_logger_test, \
 
 NUM_IN_FR_EXT = 5 # temporal size of patch
 
-class TestRunner:
+class TestRunner_prev:
     def __init__(self, options_path: str):
         self.options_path = options_path
         self.options = load_options(options_path)
@@ -151,28 +151,17 @@ class TestRunner:
         use_sr   = self.test_settings.get('use_sr', False)
         sr_scale = self.test_settings.get('sr_scale', 1)
 
-        # SR: the model receives LR input and outputs HR.
-        # original_seq is the HR ground truth — compare SR output directly against it.
-        # (downsampling to LR happens inside denoise_sequence, matching the training pipeline)
+        # When SR is on, upsample the LR clean/noisy references to exactly match
+        # the denoised output size (safer than scale_factor, handles padding edge cases)
         ref_seq   = original_seq
         ref_noisy = noisy_seq.squeeze()
-
-        # 1. Safely crop BOTH sequences to the minimum overlapping dimension
-        min_h = min(denoised_seq.shape[-2], ref_seq.shape[-2])
-        min_w = min(denoised_seq.shape[-1], ref_seq.shape[-1])
-        
-        denoised_seq = denoised_seq[..., :min_h, :min_w]
-        ref_seq = ref_seq[..., :min_h, :min_w]
-
-        # 2. Upsample LR noisy sequence to match HR reference for the PSNR calculation
         if use_sr and sr_scale > 1:
             import torch.nn.functional as F
-            if ref_noisy.dim() == 3: # Ensure it is 4D [frames, channels, H, W] for interpolation
-                ref_noisy = ref_noisy.unsqueeze(1)
-            ref_noisy = F.interpolate(ref_noisy, size=(min_h, min_w), mode='bicubic', align_corners=False)
-            ref_noisy = ref_noisy.squeeze()
-        else:
-            ref_noisy = ref_noisy[..., :min_h, :min_w]
+            out_size  = denoised_seq.shape[-2:]          # actual H×W of SR output
+            ref_seq   = F.interpolate(original_seq, size=out_size,
+                                      mode='bicubic', align_corners=False).clamp(0., 1.)
+            ref_noisy = F.interpolate(noisy_seq.squeeze(), size=out_size,
+                                      mode='bicubic', align_corners=False).clamp(0., 1.)
 
         psnr       = batch_psnr(denoised_seq, ref_seq,   1., False)
         psnr_noisy = batch_psnr(ref_noisy,    ref_seq,   1., False)
@@ -257,21 +246,12 @@ class TestRunner:
         use_sr   = self.test_settings.get('use_sr', False)
         sr_scale = self.test_settings.get('sr_scale', 1)
 
-        # --- True SR pipeline: GT → bicubic↓ → LR → + noise → LQ → model → SR output ---
-        # Matches the training pipeline in train_runner.py exactly.
-        if use_sr and sr_scale > 1:
-            import torch.nn.functional as F
-            seq_lr = F.interpolate(original_seq, scale_factor=1.0 / sr_scale,
-                                   mode='bicubic', align_corners=False).clamp(0., 1.)
-        else:
-            seq_lr = original_seq
-
-        # Add noise to LR sequence
-        noise = torch.empty_like(seq_lr).normal_(mean=0, std=noise_level).to(device)
-        noisy_seq = seq_lr + noise
+        # Add noise
+        noise = torch.empty_like(original_seq).normal_(mean=0, std=noise_level).to(device)
+        noisy_seq = original_seq + noise
         noisestd = torch.FloatTensor([noise_level]).to(device)
 
-        numframes, C, H, W = noisy_seq.shape   # H, W are now LR dims
+        numframes, C, H, W = noisy_seq.shape
         noise_map = noisestd.expand((1, 1, H, W))
         padded_noisyseq, padded_noisemap = apply_padding(noisy_seq, noise_map)
 
@@ -290,7 +270,7 @@ class TestRunner:
         # of padded_noisyseq so only the padding (not the SR upscale) is removed.
         if use_sr and sr_scale > 1:
             import torch.nn.functional as F_pad
-            scaled_noisy = F_pad.interpolate(noisy_seq, scale_factor=sr_scale,
+            scaled_noisy = F_pad.interpolate(padded_noisyseq, scale_factor=sr_scale,
                                              mode='bicubic', align_corners=False)
             denoised_seq = remove_padding(scaled_noisy, denoised_seq)
         else:
@@ -364,13 +344,3 @@ class TestRunner:
 
         # convert to appropiate type and return
         return denframes
-
-
-
-
-
-
-
-
-
-

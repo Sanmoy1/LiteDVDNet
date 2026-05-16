@@ -142,8 +142,8 @@ class TrainRunner:
 					loss = torch.sqrt((pred - target) ** 2 + self.eps ** 2)
 					return loss.sum() if self.reduction == 'sum' else loss.mean()
 
-			criterion = CharbonnierLoss(eps=1e-3, reduction='sum')
-			# criterion = nn.L1Loss(reduction='sum')      # commented out — replaced by Charbonnier
+			# criterion = CharbonnierLoss(eps=1e-3, reduction='sum')
+			criterion = nn.L1Loss(reduction='sum')      # commented out — replaced by Charbonnier
 			# criterion = nn.MSELoss(reduction='sum')     # commented out — MSE blurs SR outputs
 			criterion.cuda()
 
